@@ -7,42 +7,36 @@ using UnityEngine;
 /// </summary>
 public class Canon : MonoBehaviour {
 
-    protected InputHandler inputHandler;
+    // Projectile used by this canon
+    [SerializeField] private GameObject projectile;
 
-    // Does the player want to fire ?
-    protected bool triggerFiring;
+    // Key to trigger this canon
+    [SerializeField] private KeyCode triggerKey;
+
+    // Does the player want to fire for a given canon
+    private bool isTriggered;
 
     // Is the canon actually firing ?
-    protected bool firing;
+    private bool firing;
 
-    // On-hit damages
-    protected int damage;
-
-    // Duration between each bullet 
-    protected float cooldown;
-
-    // Bullet travel speed
-    protected float speed;
-
-    private void Awake() {
-        InitCanonStats();
-        inputHandler = gameObject.AddComponent<InputHandler>();
+    private void Start() {
+        InitCanon();
     }
 
     private void Update() {
-        UpdateTriggerFiring();
-        UpdateCanonState(triggerFiring);
+        UpdateIsTriggered();
+        UpdateCanonState();
     }
 
     /// <summary>
     ///  To be overriden. Init canon trigger with left click.
     /// </summary>
-    protected virtual void UpdateTriggerFiring() {
-        triggerFiring = InputHandler.LeftClick;
+    protected virtual void UpdateIsTriggered() {
+        IsTriggered = Input.GetKey(triggerKey);
     }
 
-    private void UpdateCanonState(bool tf) {
-        if (tf & !firing) {
+    private void UpdateCanonState() {
+        if (IsTriggered & !Firing) {
             StartCoroutine(Fire());
         }
     }
@@ -50,11 +44,10 @@ public class Canon : MonoBehaviour {
     /// <summary>
     ///  To be overriden. Init canon stats with no damages.
     /// </summary>
-    protected virtual void InitCanonStats() {
-        damage = Constantes.DefaultFireDamage;
-        cooldown = Constantes.DefaultFireCooldown;
-        speed = Constantes.DefaultFireSpeed;
+    protected virtual void InitCanon() {
         firing = false;
+        transform.position = GetComponentInParent<Transform>().position;
+        transform.position += transform.up * 0.5f;
     }
 
     /// <summary>
@@ -62,27 +55,24 @@ public class Canon : MonoBehaviour {
     /// </summary>
     /// <returns></returns>
     protected virtual IEnumerator Fire() {
-        firing = true;
-        while (triggerFiring) {
-            ShootNewBullet();
-            yield return new WaitForSecondsRealtime(cooldown);
+        Firing = true;
+        while (IsTriggered) {
+            ShootNewProjectile();
+            yield return new WaitForSecondsRealtime(projectile.GetComponent<Projectile>().Cooldown);
         }
-        firing = false;
+        Firing = false;
     }
 
     /// <summary>
-    ///  To be overriden, according to every canon type.
+    ///  Instanciates projectile prefab. Its behavior is handled with its own script Projectile.cs
     /// </summary>
-    protected virtual void ShootNewBullet() {
-        Debug.Log("Shooting new empty bullet");
+    protected virtual void ShootNewProjectile() {
+        float direction = GetComponentInParent<MainShipController>().Angle + 90.0f;
+        GameObject p = Instantiate(projectile, transform.position, Quaternion.Euler(0, 0, direction));
     }
 
     // Accessors
-
-    public int Damage { get => damage; set => damage = value; }
-    public float Cooldown { get => cooldown; set => cooldown = value; }
-    public float Speed { get => speed; set => speed = value; }
-    public InputHandler InputHandler { get => inputHandler; set => inputHandler = value; }
-    public bool Firing { get => firing; set => firing = value; }
-    public bool TriggerFiring { get => triggerFiring; set => triggerFiring = value; }
+    public GameObject Projectile { get => projectile; set => projectile = value; }
+    protected bool IsTriggered { get => isTriggered; set => isTriggered = value; }
+    protected bool Firing { get => firing; set => firing = value; }
 }
